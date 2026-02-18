@@ -167,20 +167,14 @@ gcc -forenmp main.c module1.c module2.c -o pr1_omp
 ### Код програми main.c
 ```c
 #include <stdio.h>
-#include <pthread.h>
 #include "modules.h"
 
 int main() {
-    pthread_t thread1, thread2;
     int initial_data = 100;
-
     printf("Initial value: %d\n", initial_data);
 
-    pthread_create(&thread1, NULL, add_func, &initial_data);
-    pthread_create(&thread2, NULL, sub_func, &initial_data);
-
-    pthread_join(thread1, NULL);
-    pthread_join(thread2, NULL);
+    add_func(&initial_data);
+    sub_func(&initial_data);
 
     printf("Result: %d\n", initial_data);
     return 0;
@@ -188,24 +182,36 @@ int main() {
 ```
 ### Код програми module1.с
 ```c
-#include <stdio.h>
+#include <omp.h>
 #include "modules.h"
 
-void* add_func(void* arg) {
-    int *val = (int*)arg;
-    for (int i = 0; i < 1000000; i++) *val +=1;
-    return NULL;
+void add_func(int *val) {
+    int local_sum = 0;
+
+    #pragma omp parallel for reduction(+:local_sum)
+    for (int i = 0; i < 1000000; i++) {
+        local_sum++;
+    }
+
+    #pragma omp atomic
+    *val += local_sum;
 }
 ```
 ### Код програми module2.с
 ```c
-#include <stdio.h>
 #include "modules.h"
+#include <omp.h>
 
-void* sub_func(void* arg) {
-    int *val = (int*)arg;
-    for (int i = 0; i < 1000000; i++) *val-=1;
-    return NULL;
+void sub_func(int *val) {
+    int local_sub = 0;
+
+    #pragma omp parallel for reduction(+:local_diff)
+    for (int i = 0; i < 1000000; i++) {
+        local_sub++; 
+    }
+
+    #pragma omp atomic
+    *val -= local_sub;
 }
 ```
 
