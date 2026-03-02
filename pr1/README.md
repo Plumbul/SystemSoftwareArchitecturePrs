@@ -42,10 +42,10 @@ Hello Ubuntu
   - Використовуйте асинхронний ввід/вивід (aio.h) замість стандартного stdio.h.
   - Реалізуйте версію програми на C++ з використанням std::thread.
 
-### Напишіть команду компіляції з підтримкою багатопоточності (-pthread).
-  Враховуючи великий обсяг коду, який необхідно написати, було прийнято рішення встановити зручніший текстовий редактор коду - micro. Також оскільки для виконання завдання необхідно декілька файлів, на початку було прийнято рішення написати хеддерний файл modules.h
+### Підготовка файлів для виконання завдання
+  Враховуючи великий обсяг коду, який необхідно написати, було прийнято рішення встановити зручний текстовий редактор коду - micro. Також оскільки для виконання завдання необхідно декілька файлів, на початку було прийнято рішення написати хеддерний файл modules.h
 
-### Код файлу modules.h
+#### Код файлу modules.h
 ```c
 #ifndef MODULES_H
 #define MODULES_H
@@ -55,8 +55,8 @@ void* sub_func(void* arg);
 
 #endif
 ```
-Далі про створено програму main.с яка містить операції з потоками - їх створення та паралельне виконання операційщодо змінної initial_data. Функції, які оперують цією змінною містяться у програмах module1.с та module2.с - у них створено два цикли, один з яких додає до заданого числа одиницю мільйон разів, а другий одиницю мільон разів віднімає. Програми мають на меті продемонструвати що великі за обсягом паралельні операції будуть призводити до непередбачуваних результатів за відсутності синхронізації процесів. 
-### Код програми main.c
+Далі створено програму main.с яка містить операції з потоками - їх створення та паралельне виконання операційщодо змінної initial_data. Функції, які оперують цією змінною містяться у програмах module1.с та module2.с - у них створено два цикли, один з яких додає до заданого числа одиницю мільйон разів, а другий одиницю мільон разів віднімає. Програми мають на меті продемонструвати що великі за обсягом паралельні операції будуть призводити до непередбачуваних результатів за відсутності синхронізації процесів. 
+#### Код програми main.c
 ```c
 #include <stdio.h>
 #include <pthread.h>
@@ -78,7 +78,7 @@ int main() {
     return 0;
 }
 ```
-### Код програми module1.с
+#### Код програми module1.с
 ```c
 #include <stdio.h>
 #include "modules.h"
@@ -89,7 +89,7 @@ void* add_func(void* arg) {
     return NULL;
 }
 ```
-### Код програми module2.с
+#### Код програми module2.с
 ```c
 #include <stdio.h>
 #include "modules.h"
@@ -100,22 +100,27 @@ void* sub_func(void* arg) {
     return NULL;
 }
 ```
+### Напишіть команду компіляції з підтримкою багатопоточності (-pthread).
 
-### Компіляція та запуск програми
+#### Компіляція та запуск програм
   ```c
 gcc main.c module1.c module2.c -o pr1 -pthread
 ./pr1
 ```
 ### Результат виконання програми
 
-Картінка
+![photo_2026-03-02_15-49-47](https://github.com/user-attachments/assets/8662b6bc-44e2-4b45-b8af-2c88899543e7)
 
-### Висновок
+#### Висновок
 Результат виконання програми демонструє що великі за обсягом паралельні операції при відсутності синхронізації неминуче призводять до спотворення даних через паралельне опрацювання потоків сучасними операційними системами.
 
- ### Змініть код так, щоб він використовував OpenMP (#pragma omp parallel).
- 
- ### Код програми main.c
+### Змініть код так, щоб він використовував OpenMP (#pragma omp parallel).
+
+Написана програма використовувала виклики pthread_create та pthread_join, що вимагало ручного керування кожним потоком. Для виконання наступного завдання код було модифіковано наступним чино:
+- Використано бібліотеку <omp.h>, яка надає інтерфейс для моделі паралельного програмування OpenMP.
+- Використано директиву #pragma omp parallel sections, яка замість явного створення структур для потоків використовує механізм секцій, тобто вказує компілятору створити групу потоків, де кожна вкладена секція (#pragma omp section) буде виконуватися окремим потоком паралельно.
+
+#### Код програми main.c
 ```c
 #include <stdio.h>
 #include <omp.h>
@@ -144,27 +149,34 @@ int main() {
 }
 ```
 
-### Компіляція та запуск програми
+#### Компіляція та запуск програми
   ```c
 gcc -forenmp main.c module1.c module2.c -o pr1_omp
 ./pr1_omp
 ```
+Використано прапореуь компіляції -forenmp, який активує обробку директив #pragma.
+#### Результат виконання програми
 
-### Результат виконання програми
+![photo_2026-02-17_18-07-32](https://github.com/user-attachments/assets/4b8fb3db-954e-40c5-a42f-e6582f545f3a)
 
-Картінка
-
-### Висновок
+#### Висновок
+Зміна спосібу створення потоків на OpenMP вирішила проблему одночасного доступу до пам'яті. і тепер потоки не конфліктують при спробі одночасно змінити initial_data.
 
 ### Використовуйте valgrind або gprof для аналізу продуктивності.
 Буде проведено аналіз 
-Картінка
+
+![photo_2026-03-02_15-53-17](https://github.com/user-attachments/assets/7b836fec-5116-4164-b78e-c4fb6fab1fcc)
+![photo_2026-02-17_19-05-36](https://github.com/user-attachments/assets/231dccff-9d65-4e57-ace3-8b8d917d67cb)
+
 ### Висновок
 ### gcc -Wall -Wextra -pthread main.c module1.c module2.c -o threaded_program
-Картінка
+
+![1](https://github.com/user-attachments/assets/dd2513c2-9b8b-41c0-9ad0-203256fb3059)
+
+
 ### Оптимізуйте код для роботи з багатоядерними процесорами
 Змінено код 
-### Код програми main.c
+#### Код програми main.c
 ```c
 #include <stdio.h>
 #include "modules.h"
@@ -180,7 +192,7 @@ int main() {
     return 0;
 }
 ```
-### Код програми module1.с
+#### Код програми module1.с
 ```c
 #include <omp.h>
 #include "modules.h"
@@ -197,7 +209,7 @@ void add_func(int *val) {
     *val += local_sum;
 }
 ```
-### Код програми module2.с
+#### Код програми module2.с
 ```c
 #include "modules.h"
 #include <omp.h>
@@ -214,14 +226,152 @@ void sub_func(int *val) {
     *val -= local_sub;
 }
 ```
+Результати роботи 
+
 
 
 
 
 
 ### Використовуйте асинхронний ввід/вивід (aio.h) замість стандартного stdio.h.
+#### Код файлу modules.h
+```c
+#ifndef MODULES_H
+#define MODULES_H
+
+void* add_func(void* arg);
+void* sub_func(void* arg);
+
+#endif
+```
+
+#### Код програми main.c
+```c
+#include <stdio.h>
+#include <string.h>
+#include <aio.h>
+#include <unistd.h>
+#include <pthread.h>
+#include "modules.h"
+
+void async_print(const char *msg) {
+    static struct aiocb cb;
+    memset(&cb, 0, sizeof(struct aiocb));
+    cb.aio_fildes = STDOUT_FILENO;
+    cb.aio_buf = (void *)msg;
+    cb.aio_nbytes = strlen(msg);
+
+    if (aio_write(&cb) == -1) {
+        perror("aio_write failed");
+    }
+}
+
+int main() {
+    int initial_data = 100;
+    char msg[64];
+    sprintf(msg, "Initial value: %d\n", initial_data);
+    async_print(msg);
+
+    pthread_t t1, t2;
+    pthread_create(&t1, NULL, add_func, &initial_data);
+    pthread_create(&t2, NULL, sub_func, &initial_data);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    printf("Result: %d\n", initial_data);
+    return 0;
+}
+```
+#### Код програми module1.с
+```c
+#include "modules.h"
+#include <stdio.h>
+
+void* add_func(void* arg) {
+    int *val = (int*)arg;
+    for (int i = 0; i < 1000000; i++) {
+        *val += 1;
+    }
+    return NULL;
+}
+```
+#### Код програми module2.с
+```c
+#include "modules.h"
+#include <stdio.h>
+
+void* sub_func(void* arg) {
+    int *val = (int*)arg;
+    for (int i = 0; i < 1000000; i++) {
+        *val *= 1;
+    }
+    return NULL;
+}
+```
+
+#### Компіляція та запуск програми
+
+![3](https://github.com/user-attachments/assets/e631d97f-33ba-45cf-89dd-5bd8014a1459)
 
 ### Реалізуйте версію програми на C++ з використанням std::thread.
+#### Код файлу modules.hpp
+```c
+#ifndef MODULES_HPP
+#define MODULES_HPP
 
-#### Версія з
+void add_func(int *val);
+void sub_func(int *val);
+
+#endif
+
+#endif
+```
+
+### Код програми main.cpp
+```c
+#include <iostream>
+#include <thread>
+#include "modules.hpp"
+
+int main() {
+    int initial_data = 100;
+
+    std::cout << "Initial value: " << initial_data << std::endl;
+
+    std::thread thread1(add_func, &initial_data);
+    std::thread thread2(sub_func, &initial_data);
+
+    thread1.join();
+    thread2.join();
+
+    std::cout << "Result: " << initial_data << std::endl;
+
+    return 0;
+}
+```
+#### Код програми module1.сpp
+```c
+#include "modules.hpp"
+
+void add_func(int *val) {
+    for (int i = 0; i < 1000000; i++) {
+        *val += 1;
+    }
+}
+```
+#### Код програми module2.сpp
+```c
+#include "modules.hpp"
+
+void sub_func(int *val) {
+    for (int i = 0; i < 1000000; i++) {
+        *val -= 1;
+    }
+}
+```
+
+#### Компіляція та запуск програми
+
+![5](https://github.com/user-attachments/assets/d3e32692-f508-4404-ba7a-ad69355a94f2)
 
