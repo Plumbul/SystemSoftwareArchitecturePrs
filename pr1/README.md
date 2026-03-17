@@ -240,16 +240,6 @@ void sub_func(int *val) {
 
 ### Використовуйте асинхронний ввід/вивід (aio.h) замість стандартного stdio.h.
 Для створення асинхронного виводу додано спеціалізовану бібліотеку #include <aio.h>
-#### Код файлу modules.h
-```c
-#ifndef MODULES_H
-#define MODULES_H
-
-void* add_func(void* arg);
-void* sub_func(void* arg);
-
-#endif
-```
 
 #### Код програми main.c
 ```c
