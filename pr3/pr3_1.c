@@ -22,7 +22,7 @@ int main() {
     signal(SIGXFSZ, handle_sigxfsz);
 
     limit.rlim_cur = 100;
-    limit.rlim_max = 100;
+    limit.rlim_max = 200;
 
     if (setrlimit(RLIMIT_FSIZE, &limit) != 0) {
         perror("setrlimit error");
