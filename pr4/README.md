@@ -244,14 +244,37 @@ int main() {
 #### Висновок
 Тестування підтверджує, що при невдалому виконанні realloc(3) оригінальний вказівник не анулюється. Це вимагає від програміста обов'язкового використання тимчасової змінної для перевірки результату. Якщо ж одразу перезаписати початковий вказівник значенням NULL, яке поверне realloc, доступ до раніше виділеної пам'яті буде назавжди втрачено, хоча вона залишатиметься зайнятою в системі.
 ### Завдання 4.6. Якщо realloc(3) викликати з NULL або розміром 0, що станеться? Напишіть тестовий випадок.
+#### Відповідь
+Якщо ptr == NULL: Функція поводиться точно так само, як malloc(size) - вона виділяє новий блок пам'яті вказаного розміру. А якщо size == 0 realloc(ptr, 0) зазвичай звільняє пам'ять за адресою ptr і повертає або NULL, або мінімальний унікальний об'єкт (аналогічно malloc(0)).
 #### Код програми
 ```с
+#include <stdio.h>
+#include <stdlib.h>
 
+int main() {
+    printf("--- Testing realloc(NULL, size) ---\n");
+    void *p1 = realloc(NULL, 100);
+    if (p1 != NULL) {
+        printf("realloc(NULL, 100) succeeded. Pointer: %p\n", p1);
+    }
+
+    printf("\n--- Testing realloc(ptr, 0) ---\n");
+    void *p2 = realloc(p1, 0);
+    
+    printf("realloc(p1, 0) returned: %p\n", p2);
+
+    if (p2 != NULL) {
+        free(p2);
+        printf("Pointer p2 freed.\n");
+    }
+
+    return 0;
+}
 ```
 #### Результат запуску
-
+![4_9](https://github.com/user-attachments/assets/df1456de-9575-4748-80a8-924a0aa72e63)
 #### Висновок
-
+Результати запуску програми демонструють універсальність функції realloc(3). Перший тест підтверджує можливість використання realloc для первинного виділення пам'яті шляхом передачі NULL як бази. Другий тест показує, що при запиті розміру 0, бібліотека звільняє раніше виділений блок і повертає NULL. Такий механізм дозволяє писати більш компактний код для динамічних структур даних, проте вимагає обережності, оскільки в різних операційних системах (наприклад, Windows або старі версії UNIX) повернене значення для realloc(ptr, 0) може відрізнятися, що потенційно створює ризики витоку пам'яті при неправильній обробці результату.
 ### Завдання 4.7
 Перепишіть наступний код, використовуючи reallocarray(3):
 ```с
@@ -263,9 +286,139 @@ newptr = realloc(ptr, 500*sizeof(struct sbar));
 Порівняйте результати виконання з використанням ltrace.
 #### Код програми
 ```с
+#include <stdio.h>
+#include <stdlib.h>
 
+struct sbar {
+    int id;
+    double values[5];
+};
+
+int main() {
+    struct sbar *ptr, *newptr;
+
+    printf("--- Step 1: Initializing memory with calloc(1000) ---\n");
+    ptr = (struct sbar *)calloc(1000, sizeof(struct sbar));
+    
+    if (ptr == NULL) {
+        perror("Initial allocation failed");
+        return 1;
+    }
+    printf("Address after calloc: %p\n", (void*)ptr);
+
+    printf("\n--- Step 2: Resizing to 500 elements with reallocarray ---\n");
+    newptr = (struct sbar *)reallocarray(ptr, 500, sizeof(struct sbar));
+
+    if (newptr == NULL) {
+        perror("Reallocarray failed");
+        free(ptr);
+        return 1;
+    }
+
+    ptr = newptr;
+    printf("Address after reallocarray: %p\n", (void*)ptr);
+    printf("Memory successfully resized to 500 elements.\n");
+
+    free(ptr);
+    printf("\nMemory freed. Process finished.\n");
+    
+    return 0;
+}
 ```
 #### Результат запуску
+![4_10](https://github.com/user-attachments/assets/054bf092-19ff-4d3b-b932-591c979c4498)
+![4_11](https://github.com/user-attachments/assets/1f912d8b-6d28-4a6e-9cd5-e82435fa4105)
 
+#### Код програми
+```с
+#include <stdlib.h>
+#include <stdio.h>
+
+struct sbar {
+    int id;
+    char data[60];
+};
+
+int main() {
+    struct sbar *ptr, *newptr;
+
+    printf("Step 1: Allocating memory for 1000 elements...\n");
+    ptr = calloc(1000, sizeof(struct sbar));
+    if (!ptr) {
+        perror("calloc failed");
+        return 1;
+    }
+    printf("Initial pointer address: %p\n", (void*)ptr);
+
+    printf("Step 2: Resizing to 500 elements using reallocarray...\n");
+    newptr = reallocarray(ptr, 500, sizeof(struct sbar));
+
+    if (newptr == NULL) {
+        perror("reallocarray failed");
+        free(ptr);
+        return 1;
+    }
+
+    ptr = newptr;
+    printf("New pointer address:     %p\n", (void*)ptr);
+    printf("Memory successfully resized and verified.\n");
+    
+    free(ptr);
+    printf("Memory freed. Process finished.\n");
+    return 0;
+}
+```
+#### Результат запуску
+![4_12](https://github.com/user-attachments/assets/5db85a93-427a-459d-b285-ce3104d2fa04)
 #### Висновок
+Використання reallocarray(3) замість стандартного realloc(3) забезпечує вбудовану перевірку на цілочисельне переповнення при множенні кількості елементів на їхній розмір, що запобігає некоректному виділенню пам'яті у разі перевищення ліміту SIZE_MAX. Аналіз за допомогою утиліти ltrace підтверджує, що на відміну від класичного виклику, reallocarray приймає кількість об'єктів та розмір одиниці як окремі аргументи, дозволяючи бібліотеці libc безпечно обчислити результуючий об'єм. У проведених тестах збереження ідентичної адреси вказівника після зміни розміру свідчить про оптимізацію "in-place resizing", за якої менеджер пам'яті glibc просто відсікає зайву частину існуючого чанка в купі без копіювання даних. Таким чином, перехід на reallocarray підвищує стійкість програми до вразливостей типу integer overflow, зберігаючи при цьому ефективність стандартних операцій керування пам'яттю.
+## Завдання по ВАРІАНТАХ
+### Експериментально показати, як часто після free() malloc() повертає ту саму адресу для різних розмірів блоків.
+#### Код програми
+```с
+#include <stdio.h>
+#include <stdlib.h>
 
+void test_reuse(size_t size, const char* label) {
+    printf("--- Testing %s (size: %zu bytes) ---\n", label, size);
+    int reuse_count = 0;
+    int iterations = 10;
+
+    for (int i = 0; i < iterations; i++) {
+        void *p1 = malloc(size);
+        void *p2 = NULL;
+
+        free(p1);
+        p2 = malloc(size);
+
+        if (p1 == p2) {
+            reuse_count++;
+            printf("  Iter %d: REUSED (%p)\n", i, p2);
+        } else {
+            printf("  Iter %d: NEW    (p1:%p, p2:%p)\n", i, p1, p2);
+        }
+        free(p2);
+    }
+    printf("Result: %d/%d reuses\n\n", reuse_count, iterations);
+}
+
+int main() {
+    test_reuse(32, "Small block");
+    
+    test_reuse(1024, "Medium block");
+
+    printf("--- Testing mismatched sizes ---\n");
+    void *p1 = malloc(64);
+    free(p1);
+    void *p2 = malloc(1024);
+    if (p1 == p2) printf("Mismatched REUSED\n");
+    else printf("Mismatched NEW (Expected)\n");
+    free(p2);
+
+    return 0;
+}
+```
+#### Результат запуску
+![4_13](https://github.com/user-attachments/assets/3decbe8e-063d-4022-9adb-f6aaf80581da)
+#### Висновок
+Експериментальна перевірка показує, що при повторному запиті блоку ідентичного розміру після free() імовірність отримання тієї самої адреси наближається до 100%, що зумовлено роботою кешів потоків (tcache) та механізму fastbins у бібліотеці glibc. Ці структури працюють за принципом LIFO (Last In, First Out), зберігаючи нещодавно звільнені чанки пам'яті для їх миттєвого перевикористання без звернення до системних викликів ядра. Проте при зміні розміру запитуваного блоку або при виділенні великої кількості проміжних об'єктів між free() та новим malloc() алокатор може об'єднувати вільні фрагменти для боротьби з фрагментацією або виділяти пам'ять з інших кошиків (bins), що призводить до зміни адреси. Таким чином, детермінованість повторного використання адреси є прямо залежною від розміру блоку та відсутності сторонніх операцій виділення пам'яті в інтервалі між звільненням і повторним запитом.
