@@ -7,359 +7,457 @@ _____________
 1. Використайте popen(), щоб передати вивід команди rwho (команда UNIX) до more (команда UNIX) у програмі на C.
 2. Напишіть програму мовою C, яка імітує команду ls -l в UNIX — виводить список усіх файлів у поточному каталозі та перелічує права доступу тощо.
 3. Напишіть програму, яка друкує рядки з файлу, що містять слово, передане як аргумент програми.
-4. Напишіть програму, яка виводить список файлів, заданих у вигляді аргументів, з зупинкою кожні 20 рядків.
+4. Напишіть програму, яка виводить список файлів, заданих у вигляді аргументів, з зупинкою кожні 20 рядків, доки не буде натиснута клавіша
 5. Напишіть програму, яка перелічує всі файли в поточному каталозі та всі файли в підкаталогах.
 6. Напишіть програму, яка перелічує лише підкаталоги у алфавітному порядку.
 7. Напишіть програму, яка показує користувачу всі його/її вихідні програми на C, а потім в інтерактивному режимі запитує,
-   чи потрібно надати іншим дозвіл на читання
-   (read permission); у разі ствердної відповіді — такий дозвіл повинен бути наданий.
-10. Напишіть програму, яка надає користувачу можливість видалити будь-який або всі файли у поточному робочому каталозі.
-11. Напишіть програму на C, яка вимірює час виконання фрагмента коду в мілісекундах.
-12. Напишіть програму мовою C для створення послідовності випадкових чисел з плаваючою комою у діапазонах:
- (a) від 0.0 до 1.0
- (b) від 0.0 до n, де n — будь-яке дійсне число з плаваючою точкою.
- Початкове значення генератора випадкових чисел має бути встановлене так, щоб гарантувати унікальну послідовність.
+   чи потрібно надати іншим дозвіл на читання (read permission); у разі ствердної відповіді — такий дозвіл повинен бути наданий.
+8. Напишіть програму, яка надає користувачу можливість видалити будь-який або всі файли у поточному робочому каталозі. Має з’являтися ім’я файлу з запитом, чи слід його видалити.
+9. Напишіть програму на C, яка вимірює час виконання фрагмента коду в мілісекундах.
+10. Напишіть програму мовою C для створення послідовності випадкових чисел з плаваючою комою у діапазонах:
+   (a) від 0.0 до 1.0
+   (b) від 0.0 до n, де n — будь-яке дійсне число з плаваючою точкою.
+   Початкове значення генератора випадкових чисел має бути встановлене так, щоб гарантувати унікальну послідовність.
 
-## Завдання 1
-У вас є програма на C, яка складається з кількох модулів (main.c, module1.c, module2.c) та використовує бібліотеку pthread.
-  - Напишіть команду компіляції з підтримкою багатопоточності (-pthread).
-  - Змініть код так, щоб він використовував OpenMP (#pragma omp parallel).
-  - Використовуйте valgrind або gprof для аналізу продуктивності.
-  - gcc -Wall -Wextra -pthread main.c module1.c module2.c -o threaded_program
-  - Оптимізуйте код для роботи з багатоядерними процесорами.
-  - Використовуйте асинхронний ввід/вивід (aio.h) замість стандартного stdio.h.
-  - Реалізуйте версію програми на C++ з використанням std::thread.
+### Завдання 1
+Використайте popen(), щоб передати вивід команди rwho (команда UNIX) до more (команда UNIX) у програмі на C.
 
-### Підготовка файлів для виконання завдання
-  Враховуючи великий обсяг коду, який необхідно написати, було прийнято рішення встановити зручний текстовий редактор коду - micro. Також оскільки для виконання завдання необхідно декілька файлів, на початку було прийнято рішення написати хеддерний файл modules.h
-
-#### Код файлу modules.h
-```c
-#ifndef MODULES_H
-#define MODULES_H
-
-void* add_func(void* arg);
-void* sub_func(void* arg);
-
-#endif
-```
-Далі створено програму main.с яка містить операції з потоками - їх створення та паралельне виконання операційщодо змінної initial_data. Функції, які оперують цією змінною містяться у програмах module1.с та module2.с - у них створено два цикли, один з яких додає до заданого числа одиницю мільйон разів, а другий одиницю мільон разів віднімає. Програми мають на меті продемонструвати що великі за обсягом паралельні операції будуть призводити до непередбачуваних результатів за відсутності синхронізації процесів. 
-#### Код програми main.c
+#### Код програми pr7_1.с
 ```c
 #include <stdio.h>
-#include <pthread.h>
-#include "modules.h"
 
 int main() {
-    pthread_t thread1, thread2;
-    int initial_data = 100;
+    FILE *in, *out;
+    char buf[256];
 
-    printf("Initial value: %d\n", initial_data);
+    in = popen("rwho", "r");
+    out = popen("more", "w");
 
-    pthread_create(&thread1, NULL, add_func, &initial_data);
-    pthread_create(&thread2, NULL, sub_func, &initial_data);
+    while (fgets(buf, sizeof(buf), in)) {
+        fputs(buf, out);
+    }
 
-    pthread_join(thread1, NULL);
-    pthread_join(thread2, NULL);
-
-    printf("Result: %d\n", initial_data);
+    pclose(in);
+    pclose(out);
     return 0;
 }
 ```
-#### Код програми module1.с
+#### Команда компіляції та запуск програми
 ```c
-#include <stdio.h>
-#include "modules.h"
-
-void* add_func(void* arg) {
-    int *val = (int*)arg;
-    for (int i = 0; i < 1000000; i++) *val +=1;
-    return NULL;
-}
-```
-#### Код програми module2.с
-```c
-#include <stdio.h>
-#include "modules.h"
-
-void* sub_func(void* arg) {
-    int *val = (int*)arg;
-    for (int i = 0; i < 1000000; i++) *val-=1;
-    return NULL;
-}
-```
-### Напишіть команду компіляції з підтримкою багатопоточності (-pthread).
-
-#### Компіляція та запуск програм
-  ```c
-gcc main.c module1.c module2.c -o pr1 -pthread
-./pr1
-```
-### Результат виконання програми
-
-![photo_2026-03-02_15-49-47](https://github.com/user-attachments/assets/8662b6bc-44e2-4b45-b8af-2c88899543e7)
-
-#### Висновок
-Для компіляції було прапорець -pthread який підключає системну бібліотеку та визначає макроси для коректної роботи стандартної бібліотеки С у багатопотоковому середовищі. Результат виконання програми демонструє що великі за обсягом паралельні операції при відсутності синхронізації неминуче призводять до спотворення даних через паралельне опрацювання потоків сучасними операційними системами.
-
-### Змініть код так, щоб він використовував OpenMP (#pragma omp parallel).
-Написана програма використовувала виклики pthread_create та pthread_join, що вимагало ручного керування кожним потоком. Для виконання наступного завдання код було модифіковано наступним чином:
-- Використано бібліотеку <omp.h>, яка надає інтерфейс для моделі паралельного програмування OpenMP.
-- Використано директиву #pragma omp parallel sections, яка замість явного створення структур для потоків використовує механізм секцій, тобто вказує компілятору створити групу потоків, де кожна вкладена секція (#pragma omp section) буде виконуватися окремим потоком паралельно.
-
-#### Код програми main.c
-```c
-#include <stdio.h>
-#include <omp.h>
-#include "modules.h"
-
-int main() {
-    int initial_data = 100;
-
-    printf("Initial value: %d\n", initial_data);
-
-   #pragma omp parallel sections
-    {
-        #pragma omp section
-        {
-            add_func(&initial_data);
-        }
-
-        #pragma omp section
-        {
-            sub_func(&initial_data);
-        }
-    }
-
-    printf("Result (OpenMP): %d\n", initial_data);
-    return 0;
-}
-```
-
-#### Компіляція та запуск програми
-  ```c
-gcc -forenmp main.c module1.c module2.c -o pr1_omp
-./pr1_omp
-```
-Використано прапорець компіляції -forenmp, який активує обробку директив #pragma.
-#### Результат виконання програми
-
-![photo_2026-02-17_18-07-32](https://github.com/user-attachments/assets/4b8fb3db-954e-40c5-a42f-e6582f545f3a)
-
-#### Висновок
-Зміна спосібу створення потоків на OpenMP вирішила проблему одночасного доступу до пам'яті. і тепер потоки не конфліктують при спробі одночасно змінити initial_data.
-
-### Використовуйте valgrind або gprof для аналізу продуктивності.
-
-![photo_2026-03-02_15-53-17](https://github.com/user-attachments/assets/7b836fec-5116-4164-b78e-c4fb6fab1fcc)
-![photo_2026-02-17_19-05-36](https://github.com/user-attachments/assets/231dccff-9d65-4e57-ace3-8b8d917d67cb)
-
-#### Висновок
-Аналіз через valgrind не виявив помилки у програмі, яка проводить операції через паралельну обробку. Аналогічний результат був і при аналізі початковій програми, що може мати як причину малу кількість операцій для аналізу через що програма завершується надто швидко, однак збільшення операцій з 1 000 000 до 100 000 000 не призвело до зміни результатів.
-
-### gcc -Wall -Wextra -pthread main.c module1.c module2.c -o threaded_program
-
-![9](https://github.com/user-attachments/assets/d504d1fd-e534-43a5-a32d-1665123213f3)
-
-#### Висновок 
-Виконання команди компіляції, яка містить прапорці:
-- -Wall, який вмикає більшість попереджень компілятора.
-- -Wextra, який вмикає додаткові попередження, які не охоплюються прапорцем -Wall.
-має такий самий результат як і без них, оскільки помилок в коді програм нема.
-
-### Оптимізуйте код для роботи з багатоядерними процесорами
-У програмах використано директиву #pragma omp parallel for reduction(+:local_sum). Кожен потік тепер рахує свою частину суми локально, а в кінці результат додається до загальної змінної через #pragma omp atomic.
-#### Код програми main.c
-```c
-#include <stdio.h>
-#include "modules.h"
-
-int main() {
-    int initial_data = 100;
-    printf("Initial value: %d\n", initial_data);
-
-    add_func(&initial_data);
-    sub_func(&initial_data);
-
-    printf("Result: %d\n", initial_data);
-    return 0;
-}
-```
-#### Код програми module1.с
-```c
-#include <omp.h>
-#include "modules.h"
-
-void add_func(int *val) {
-    int local_sum = 0;
-
-    #pragma omp parallel for reduction(+:local_sum)
-    for (int i = 0; i < 1000000; i++) {
-        local_sum++;
-    }
-
-    #pragma omp atomic
-    *val += local_sum;
-}
-```
-#### Код програми module2.с
-```c
-#include "modules.h"
-#include <omp.h>
-
-void sub_func(int *val) {
-    int local_sub = 0;
-
-    #pragma omp parallel for reduction(+:local_diff)
-    for (int i = 0; i < 1000000; i++) {
-        local_sub++; 
-    }
-
-    #pragma omp atomic
-    *val -= local_sub;
-}
+gcc -Wall pr7_1.c -o pr7_1
 ```
 #### Результати роботи 
-![photo_2026-03-17_16-06-25](https://github.com/user-attachments/assets/a928e963-d1b7-45fe-a4b0-bc4228f29e43)
+
 #### Висновок
-Такий підхід усуває конфлікти доступу і дозволяє програмі масштабуватися на будь-яку кількість ядер без втрати точності, що збільшує швидкість обробки великих масивів даних.
+Використання функції popen() дозволяє створювати програмні канали (pipes) для передачі потоку даних між різними системними утилітами UNIX безпосередньо через код на C.
 
-### Використовуйте асинхронний ввід/вивід (aio.h) замість стандартного stdio.h.
-Для створення асинхронного виводу додано спеціалізовану бібліотеку #include <aio.h>. Також замість блокуючого printf, було імплементовано aio_write. Це дозволяє програмі не чекати завершення виводу в консоль, а продовжувати обчислення в основному потоці.
+### Завдання 2
+Напишіть програму мовою C, яка імітує команду ls -l в UNIX — виводить список усіх файлів у поточному каталозі та перелічує права доступу тощо.
 
-#### Код програми main.c
+#### Код програми pr7_2.с
 ```c
 #include <stdio.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
+
+int main() {
+    DIR *d;
+    struct dirent *dir;
+    struct stat s;
+    d = opendir(".");
+    while ((dir = readdir(d)) != NULL) {
+        stat(dir->d_name, &s);
+        printf((S_ISDIR(s.st_mode)) ? "d" : "-");
+        printf((s.st_mode & S_IRUSR) ? "r" : "-");
+        printf((s.st_mode & S_IWUSR) ? "w" : "-");
+        printf((s.st_mode & S_IXUSR) ? "x" : "-");
+        printf((s.st_mode & S_IRGRP) ? "r" : "-");
+        printf((s.st_mode & S_IWGRP) ? "w" : "-");
+        printf((s.st_mode & S_IXGRP) ? "x" : "-");
+        printf((s.st_mode & S_IROTH) ? "r" : "-");
+        printf((s.st_mode & S_IWOTH) ? "w" : "-");
+        printf((s.st_mode & S_IXOTH) ? "x " : "- ");
+        printf("%ld ", (long)s.st_nlink);
+        printf("%s ", getpwuid(s.st_uid)->pw_name);
+        printf("%s ", getgrgid(s.st_gid)->gr_name);
+        printf("%lld ", (long long)s.st_size);
+        char date[20];
+        strftime(date, 20, "%b %d %H:%M", localtime(&s.st_mtime));
+        printf("%s %s\n", date, dir->d_name);
+    }
+    closedir(d);
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc -Wall pr7_2.c -o pr7_2
+```
+#### Результати роботи 
+
+#### Висновок
+Робота з системними викликами stat та структурами dirent дає можливість отримувати детальні метадані файлової системи, такі як права доступу, власники та розмір файлів.
+
+### Завдання 3
+Напишіть програму, яка друкує рядки з файлу, що містять слово, передане як аргумент програми.
+
+#### Код програми pr7_3.с
+```c
+#include <stdio.h>
+
+int main() {
+    FILE *in, *out;
+    char buf[256];
+
+    in = popen("rwho", "r");
+    out = popen("more", "w");
+
+    while (fgets(buf, sizeof(buf), in)) {
+        fputs(buf, out);
+    }
+
+    pclose(in);
+    pclose(out);
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc -Wall pr7_3.c -o pr7_3
+```
+#### Результати роботи 
+
+#### Висновок
+Функція strstr() у поєднанні з потоковим читанням файлу дозволяє реалізувати ефективний алгоритм пошуку та фільтрації текстових даних за ключовим словом.
+
+### Завдання 4
+Напишіть програму, яка виводить список файлів, заданих у вигляді аргументів, з зупинкою кожні 20 рядків, доки не буде натиснута клавіша.
+
+#### Код програми pr7_4.с
+```c
+#include <stdio.h>
+
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        FILE *f = fopen(argv[i], "r");
+        char line[256];
+        int count = 0;
+        while (fgets(line, sizeof(line), f)) {
+            printf("%s", line);
+            if (++count % 20 == 0) {
+                printf("--Press Enter to continue--");
+                getchar();
+            }
+        }
+        fclose(f);
+    }
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc -Wall pr7_4.c -o pr7_4
+```
+#### Результати роботи 
+
+#### Висновок
+Реалізація механізму призупинення виводу через getchar() дозволяє керувати великими обсягами текстової інформації, створюючи інтерфейс посторінкового перегляду.
+
+### Завдання 5
+Напишіть програму, яка перелічує всі файли в поточному каталозі та всі файли в підкаталогах.
+
+#### Код програми pr7_5.с
+```c
+#include <stdio.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <string.h>
-#include <aio.h>
+
+void list(const char *name) {
+    DIR *d = opendir(name);
+    if (!d) return;
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0) continue;
+        char path[1024];
+        snprintf(path, sizeof(path), "%s/%s", name, e->d_name);
+        printf("%s\n", path);
+        struct stat s;
+        stat(path, &s);
+        if (S_ISDIR(s.st_mode)) list(path);
+    }
+    closedir(d);
+}
+
+int main() {
+    list(".");
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc -Wall pr7_5.c -o pr7_5
+```
+#### Результати роботи 
+
+#### Висновок
+Рекурсивний обхід каталогів є базовим методом для повної індексації ієрархічної структури файлової системи, включаючи всі вкладені рівні.
+
+### Завдання 6
+Напишіть програму, яка перелічує лише підкаталоги у алфавітному порядку.
+
+#### Код програми pr7_6.с
+```c
+#include <stdio.h>
+#include <dirent.h>
+#include <string.h>
+#include <stdlib.h>
+
+int main() {
+    struct dirent **n;
+    int count = scandir(".", &n, NULL, alphasort);
+    for (int i = 0; i < count; i++) {
+        if (n[i]->d_type == DT_DIR) {
+            if (strcmp(n[i]->d_name, ".") != 0 && strcmp(n[i]->d_name, "..") != 0)
+                printf("%s\n", n[i]->d_name);
+        }
+        free(n[i]);
+    }
+    free(n);
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc -Wall pr7_2.c -o pr7_6
+```
+#### Результати роботи 
+
+#### Висновок
+Використання системної функції scandir() з параметром alphasort значно спрощує процес отримання відсортованого за алфавітом списку об'єктів файлової системи.
+
+### Завдання 7
+Напишіть програму, яка показує користувачу всі його/її вихідні програми на C, а потім в інтерактивному режимі запитує, чи потрібно надати іншим дозвіл на читання (read permission); у разі ствердної відповіді — такий дозвіл повинен бути наданий.
+
+#### Код програми pr7_7.с
+```c
+#include <stdio.h>
+#include <dirent.h>
+#include <string.h>
+#include <sys/stat.h>
+
+int main() {
+    DIR *d = opendir(".");
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        char *ext = strrchr(e->d_name, '.');
+        if (ext && strcmp(ext, ".c") == 0) {
+            printf("Grant read permission to others for %s? (y/n): ", e->d_name);
+            char res;
+            scanf(" %c", &res);
+            if (res == 'y') {
+                struct stat s;
+                stat(e->d_name, &s);
+                chmod(e->d_name, s.st_mode | S_IROTH);
+            }
+        }
+    }
+    closedir(d);
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc -Wall pr7_7.c -o pr7_7
+```
+#### Результати роботи 
+
+#### Висновок
+Функція chmod() забезпечує програмне керування правами доступу, що дозволяє гнучко налаштовувати безпеку та рівні приватності файлів у багатокористувацьких системах.
+
+### Завдання 8
+Напишіть програму, яка надає користувачу можливість видалити будь-який або всі файли у поточному робочому каталозі. Має з’являтися ім’я файлу з запитом, чи слід його видалити.
+
+#### Код програми pr7_8.с
+```c
+#include <stdio.h>
+#include <dirent.h>
 #include <unistd.h>
-#include <pthread.h>
-#include "modules.h"
-
-void async_print(const char *msg) {
-    static struct aiocb cb;
-    memset(&cb, 0, sizeof(struct aiocb));
-    cb.aio_fildes = STDOUT_FILENO;
-    cb.aio_buf = (void *)msg;
-    cb.aio_nbytes = strlen(msg);
-
-    if (aio_write(&cb) == -1) {
-        perror("aio_write failed");
-    }
-}
 
 int main() {
-    int initial_data = 100;
-    char msg[64];
-    sprintf(msg, "Initial value: %d\n", initial_data);
-    async_print(msg);
-
-    pthread_t t1, t2;
-    pthread_create(&t1, NULL, add_func, &initial_data);
-    pthread_create(&t2, NULL, sub_func, &initial_data);
-
-    pthread_join(t1, NULL);
-    pthread_join(t2, NULL);
-
-    printf("Result: %d\n", initial_data);
+    DIR *d = opendir(".");
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        if (e->d_type == DT_REG) {
+            printf("Delete %s? (y/n): ", e->d_name);
+            char res;
+            scanf(" %c", &res);
+            if (res == 'y') unlink(e->d_name);
+        }
+    }
+    closedir(d);
     return 0;
 }
 ```
-#### Код програми module1.с
+#### Команда компіляції та запуск програми
 ```c
-#include "modules.h"
-#include <stdio.h>
-
-void* add_func(void* arg) {
-    int *val = (int*)arg;
-    for (int i = 0; i < 1000000; i++) {
-        *val += 1;
-    }
-    return NULL;
-}
+gcc -Wall pr7_8.c -o pr7_8
 ```
-#### Код програми module2.с
-```c
-#include "modules.h"
-#include <stdio.h>
-
-void* sub_func(void* arg) {
-    int *val = (int*)arg;
-    for (int i = 0; i < 1000000; i++) {
-        *val *= 1;
-    }
-    return NULL;
-}
-```
-
-#### Компіляція та запуск програми
-
-![3](https://github.com/user-attachments/assets/e631d97f-33ba-45cf-89dd-5bd8014a1459)
+#### Результати роботи 
 
 #### Висновок
-Асинхронний вивід дозволяє ядрам виконувати обчислення, поки ОС займається повільними операціями виводу в термінал або файл. Однак це всеодно не усуває проблему рандомності виведених даних оскільки потоки не синхронізовані.
+Системний виклик unlink() є основним інструментом для видалення посилань на файли, що призводить до їх остаточного видалення з диска після закриття всіх дескрипторів.
 
-### Реалізуйте версію програми на C++ з використанням std::thread.
-Початковий код перероблено мовою С++
-#### Код файлу modules.hpp
+### Завдання 9
+Напишіть програму на C, яка вимірює час виконання фрагмента коду в мілісекундах.
+
+#### Код програми pr7_9.с
 ```c
-#ifndef MODULES_HPP
-#define MODULES_HPP
-
-void add_func(int *val);
-void sub_func(int *val);
-
-#endif
-
-#endif
-```
-
-### Код програми main.cpp
-```c
-#include <iostream>
-#include <thread>
-#include "modules.hpp"
+#include <stdio.h>
+#include <sys/time.h>
 
 int main() {
-    int initial_data = 100;
-
-    std::cout << "Initial value: " << initial_data << std::endl;
-
-    std::thread thread1(add_func, &initial_data);
-    std::thread thread2(sub_func, &initial_data);
-
-    thread1.join();
-    thread2.join();
-
-    std::cout << "Result: " << initial_data << std::endl;
-
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    for (long i = 0; i < 100000000; i++);
+    gettimeofday(&end, NULL);
+    long ms = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
+    printf("Execution time: %ld ms\n", ms);
     return 0;
 }
 ```
-#### Код програми module1.сpp
+#### Команда компіляції та запуск програми
 ```c
-#include "modules.hpp"
-
-void add_func(int *val) {
-    for (int i = 0; i < 1000000; i++) {
-        *val += 1;
-    }
-}
+gcc -Wall pr7_9.c -o pr7_9
 ```
-#### Код програми module2.сpp
-```c
-#include "modules.hpp"
-
-void sub_func(int *val) {
-    for (int i = 0; i < 1000000; i++) {
-        *val -= 1;
-    }
-}
-```
-
-#### Компіляція та запуск програми
-
-![5](https://github.com/user-attachments/assets/d3e32692-f508-4404-ba7a-ad69355a94f2)
+#### Результати роботи 
 
 #### Висновок
-Результат програми на с++ так само рандомний, це підтверджує що фундаментальні принципи роботи з пам'яттю в багатопотоковому середовищі залишаються незмінними незалежно від мови програмування.
+Використання структури timeval та функції gettimeofday() дозволяє проводити точний моніторинг продуктивності коду з мікросекундною роздільною здатністю.
+
+### Завдання 10
+Напишіть програму мовою C для створення послідовності випадкових чисел з плаваючою комою у діапазонах:
+   (a) від 0.0 до 1.0
+   (b) від 0.0 до n, де n — будь-яке дійсне число з плаваючою точкою.
+   Початкове значення генератора випадкових чисел має бути встановлене так, щоб гарантувати унікальну послідовність.
+
+#### Код програми pr7_10.с
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+int main() {
+    double n;
+    printf("Enter n: ");
+    scanf("%lf", &n);
+    srand(time(NULL));
+    double r1 = (double)rand() / RAND_MAX;
+    double r2 = r1 * n;
+    printf("Range 0.0 - 1.0: %f\n", r1);
+    printf("Range 0.0 - %f: %f\n", n, r2);
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc -Wall pr7_10.c -o pr7_10
+```
+#### Результати роботи 
+
+#### Висновок
+Застосування функції srand() з ініціалізацією через time(NULL) гарантує отримання унікальних послідовностей випадкових чисел при кожному новому запуску програм.
+
+## Завдання по варіантах:
+### Напишіть програму, яка імітує роботу черги задач (job queue), з підтримкою паузи, скасування та відновлення, але без використання потоків або сигналів.
+
+#### Код програми pr7_11.с
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define MAX_JOBS 5
+#define TOTAL_STEPS 5
+
+typedef enum { READY, RUNNING, PAUSED, CANCELLED, COMPLETED } JobStatus;
+
+typedef struct {
+    int id;
+    int progress;
+    JobStatus status;
+} Job;
+
+void print_status(Job *jobs) {
+    printf("\rQueue Status: ");
+    for (int i = 0; i < MAX_JOBS; i++) {
+        char s;
+        if (jobs[i].status == COMPLETED) s = 'V';
+        else if (jobs[i].status == PAUSED) s = 'P';
+        else if (jobs[i].status == CANCELLED) s = 'X';
+        else if (jobs[i].status == RUNNING) s = 'R';
+        else s = '.';
+        printf("[%d:%c] ", jobs[i].id, s);
+    }
+    fflush(stdout);
+}
+
+int main() {
+    Job jobs[MAX_JOBS];
+    for (int i = 0; i < MAX_JOBS; i++) {
+        jobs[i].id = i + 1;
+        jobs[i].progress = 0;
+        jobs[i].status = READY;
+    }
+
+    int active_jobs = MAX_JOBS;
+    int cycle = 0;
+
+    while (active_jobs > 0) {
+        for (int i = 0; i < MAX_JOBS; i++) {
+            if (jobs[i].status == READY) jobs[i].status = RUNNING;
+
+            if (jobs[i].status == RUNNING) {
+                jobs[i].progress++;
+                if (jobs[i].progress >= TOTAL_STEPS) {
+                    jobs[i].status = COMPLETED;
+                    active_jobs--;
+                }
+            }
+        }
+
+        print_status(jobs);
+
+        if (cycle == 1) {
+            printf("\n[Event] Job 2 PAUSED.\n");
+            jobs[1].status = PAUSED;
+        }
+        if (cycle == 2) {
+            printf("\n[Event] Job 3 CANCELLED.\n");
+            jobs[2].status = CANCELLED;
+            active_jobs--;
+        }
+        if (cycle == 4) {
+            printf("\n[Event] Job 2 RESUMED.\n");
+            jobs[1].status = RUNNING;
+        }
+
+        cycle++;
+        for(long long j = 0; j < 500000000; j++); 
+    }
+
+    printf("\n\nAll jobs processed. Execution finished.\n");
+    return 0;
+}
+```
+#### Команда компіляції та запуск програми
+```c
+gcc pr7_11.c -o pr7_11
+```
+#### Результати роботи 
+
+#### Висновок
+Програма реалізує чергу задач за допомогою циклу подій та скінченного автомату без використання потоків. Кожна задача має свій статус (виконання, пауза, скасування), що дозволяє гнучко керувати процесом в одному потоці. Такий підхід виключає стан перегонів (race conditions) і є ефективним для систем з обмеженими ресурсами, де важливо зберігати повний контроль над плануванням завдань без системних переривань.
